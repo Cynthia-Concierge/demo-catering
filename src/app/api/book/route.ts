@@ -72,18 +72,18 @@ export async function POST(request: Request) {
       }).catch(() => {});
     }
 
-    // Create opportunity in Catering Leads pipeline
+    // Create opportunity in Demo Catering pipeline
     const pipelineId = process.env.GHL_PIPELINE_ID;
-    const stageId = process.env.GHL_STAGE_ID;
+    const pipelineStageId = process.env.GHL_STAGE_ID;
 
-    if (contactId && pipelineId && stageId) {
+    if (contactId && pipelineId && pipelineStageId) {
       fetch(`${GHL_BASE}/opportunities/`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${pit}`, 'Version': GHL_VERSION, 'Content-Type': 'application/json' },
         body: JSON.stringify({
           pipelineId,
           locationId,
-          stageId,
+          pipelineStageId,
           contactId,
           name: `${firstName} ${lastName} - ${eventType || 'Catering'} Inquiry`,
           status: 'open',
