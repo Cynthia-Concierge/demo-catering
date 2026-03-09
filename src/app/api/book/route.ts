@@ -35,8 +35,8 @@ export async function POST(request: Request) {
         lastName,
         email,
         phone,
-        source: 'Website - Booking Form',
-        tags: ['Website Lead', 'Catering Inquiry'],
+        source: 'Demo Website - Booking Form',
+        tags: ['Demo Lead', 'Demo - Catering Inquiry'],
       }),
     });
 
@@ -69,6 +69,26 @@ export async function POST(request: Request) {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${pit}`, 'Version': GHL_VERSION, 'Content-Type': 'application/json' },
         body: JSON.stringify({ body: `New Catering Inquiry:\n${noteLines.join('\n')}` }),
+      }).catch(() => {});
+    }
+
+    // Create opportunity in Catering Leads pipeline
+    const pipelineId = process.env.GHL_PIPELINE_ID;
+    const stageId = process.env.GHL_STAGE_ID;
+
+    if (contactId && pipelineId && stageId) {
+      fetch(`${GHL_BASE}/opportunities/`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${pit}`, 'Version': GHL_VERSION, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          pipelineId,
+          locationId,
+          stageId,
+          contactId,
+          name: `${firstName} ${lastName} - ${eventType || 'Catering'} Inquiry`,
+          status: 'open',
+          source: 'Demo Website',
+        }),
       }).catch(() => {});
     }
 
