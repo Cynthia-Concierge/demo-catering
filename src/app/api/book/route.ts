@@ -82,27 +82,34 @@ export async function POST(request: Request) {
       }).catch(() => {});
     }
 
-    // Step 4: Create opportunity in Demo Catering pipeline
+    // Step 4: Create opportunity in Demo Catering pipeline (await to get ID)
     const pipelineId = process.env.GHL_PIPELINE_ID;
-    const pipelineStageId = process.env.GHL_STAGE_ID;
+    const newLeadStageId = process.env.GHL_STAGE_ID;
+    const contactedStageId = process.env.GHL_CONTACTED_STAGE_ID;
+    let opportunityId: string | null = null;
 
-    if (pipelineId && pipelineStageId) {
-      fetch(`${GHL_BASE}/opportunities/`, {
+    if (pipelineId && newLeadStageId) {
+      const oppRes = await fetch(`${GHL_BASE}/opportunities/`, {
         method: 'POST',
         headers: ghlHeaders(pit),
         body: JSON.stringify({
           pipelineId,
           locationId,
-          pipelineStageId,
+          pipelineStageId: newLeadStageId,
           contactId,
           name: `${firstName} ${lastName} - ${eventType || 'Catering'} Inquiry`,
           status: 'open',
           source: 'Demo Website',
         }),
-      }).catch(() => {});
+      });
+      if (oppRes.ok) {
+        const oppData = await oppRes.json();
+        opportunityId = oppData.opportunity?.id;
+        console.log(`[book-api] Created opportunity: ${opportunityId}`);
+      }
     }
 
-    // Step 5: Directly trigger iMessage (bypass GHL workflow for reliability)
+    // Step 5: Trigger iMessage
     const triggerUrl = process.env.IMESSAGE_TRIGGER_URL || 'https://app.cynthiaconcierge.com/imessage-trigger';
     fetch(triggerUrl, {
       method: 'POST',
@@ -117,6 +124,15 @@ export async function POST(request: Request) {
         type: 'demo-booking',
       }),
     }).catch(() => {});
+
+    // Step 6: Move opportunity to "Contacted" (iMessage is now queued)
+    if (opportunityId && contactedStageId) {
+      fetch(`${GHL_BASE}/opportunities/${opportunityId}`, {
+        method: 'PUT',
+        headers: ghlHeaders(pit),
+        body: JSON.stringify({ pipelineStageId: contactedStageId }),
+      }).catch(() => {});
+    }
 
     return NextResponse.json({ success: true, contactId });
   } catch (err) {
